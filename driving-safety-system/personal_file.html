@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账户与车辆档案</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background: #f0f4f8;
+            min-height: 100vh;
+            padding: 32px 40px;
+        }
+
+        /* 主容器 */
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 页面标题 */
+        .page-header {
+            margin-bottom: 28px;
+        }
+
+        .page-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a2a3a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-header h1 span {
+            background: linear-gradient(135deg, #10b981, #059669);
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .page-header p {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 8px;
+            margin-left: 60px;
+        }
+
+        /* 卡片通用样式 */
+        .card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin-bottom: 28px;
+        }
+
+        .card-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .card-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a2a3a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-header h2 span {
+            font-size: 22px;
+        }
+
+        .card-header p {
+            font-size: 13px;
+            color: #6c757d;
+            margin-top: 6px;
+        }
+
+        /* 两列布局 */
+        .grid-2cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* 驾驶员档案卡片 */
+        .profile-card {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .profile-card .card-header {
+            border-bottom-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .profile-card .card-header h2 {
+            color: white;
+        }
+
+        .profile-card .card-header p {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .driver-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 24px 16px;
+        }
+
+        .simple-avatar {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: white;
+        }
+
+        .driver-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .driver-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        /* 信息行 */
+        .info-section {
+            padding: 0 24px 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .info-label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .info-value {
+            font-weight: 600;
+        }
+
+        /* 车辆信息卡片 */
+        .vehicle-card {
+            background: white;
+        }
+
+        .vehicle-info {
+            padding: 20px 24px;
+        }
+
+        .vehicle-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .vehicle-row:last-child {
+            border-bottom: none;
+        }
+
+        .vehicle-icon {
+            width: 40px;
+            font-size: 24px;
+        }
+
+        .vehicle-content {
+            flex: 1;
+        }
+
+        .vehicle-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+
+        .vehicle-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a2a3a;
+        }
+
+        /* 证件信息卡片 */
+        .license-card {
+            background: white;
+        }
+
+        /* 统计卡片 - 用于展示简单数据 */
+        .stats-mini-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 20px 24px;
+        }
+
+        .stat-mini-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-mini-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #10b981;
+        }
+
+        .stat-mini-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 6px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            body { padding: 20px; }
+            .grid-2cols { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h1>
+                <span>👤</span>
+                账户与车辆档案
+            </h1>
+            
+        </div>
+
+        <!-- 两列布局 -->
+        <div class="grid-2cols">
+            <!-- 左侧：驾驶员档案 -->
+            <div class="card profile-card">
+                <div class="card-header">
+                    <h2>
+                        <span>📋</span>
+                        驾驶员档案
+                    </h2>
+                    
+                </div>
+                <div class="driver-header">
+                    <div class="simple-avatar">👤</div>
+                    <div>
+                        <div class="driver-name">张三</div>
+                        <span class="driver-badge">🚗 驾驶证状态：正常</span>
+                    </div>
+                </div>
+                <div class="info-section">
+                    <div class="info-row">
+                        <span class="info-label">驾驶证号</span>
+                        <span class="info-value">44030119900307663X</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">初领日期</span>
+                        <span class="info-value">2018-05-01</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">有效期至</span>
+                        <span class="info-value">2028-05-01</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">准驾车型</span>
+                        <span class="info-value">C1（小型汽车）</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">驾龄</span>
+                        <span class="info-value">8年</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">手机号码</span>
+                        <span class="info-value">159****8888</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">居住地址</span>
+                        <span class="info-value">哈尔滨市香坊区</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：车辆信息 -->
+            <div class="card vehicle-card">
+                <div class="card-header">
+                    <h2>
+                        <span>🚗</span>
+                        机动车信息
+                    </h2>
+                    
+                </div>
+                <div class="vehicle-info">
+                    <div class="vehicle-row">
+                        <div class="vehicle-icon">🚙</div>
+                        <div class="vehicle-content">
+                            <div class="vehicle-label">车牌号码</div>
+                            <div class="vehicle-value">黑A·12345</div>
+                        </div>
+                    </div>
+                    <div class="vehicle-row">
+                        <div class="vehicle-icon">📄</div>
+                        <div class="vehicle-content">
+                            <div class="vehicle-label">机动车驾驶证号</div>
+                            <div class="vehicle-value">44030119900307663X</div>
+                        </div>
+                    </div>
+                    <div class="vehicle-row">
+                        <div class="vehicle-icon">🏭</div>
+                        <div class="vehicle-content">
+                            <div class="vehicle-label">车辆型号</div>
+                            <div class="vehicle-value">特斯拉 Model 3</div>
+                        </div>
+                    </div>
+                    <div class="vehicle-row">
+                        <div class="vehicle-icon">🔋</div>
+                        <div class="vehicle-content">
+                            <div class="vehicle-label">车辆类型</div>
+                            <div class="vehicle-value">新能源轿车</div>
+                        </div>
+                    </div>
+                    <div class="vehicle-row">
+                        <div class="vehicle-icon">📅</div>
+                        <div class="vehicle-content">
+                            <div class="vehicle-label">注册日期</div>
+                            <div class="vehicle-value">2022-05-01</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二行：证件信息与驾驶统计 -->
+        <div class="grid-2cols">
+            <!-- 证件信息卡片 -->
+            <div class="card license-card">
+                <div class="card-header">
+                    <h2>
+                        <span>📄</span>
+                        证件信息
+                    </h2>
+                    
+                </div>
+                <div class="info-section" style="padding: 0 24px 20px;">
+                    <div class="info-row" style="border-bottom-color: #e9ecef; color: #333;">
+                        <span class="info-label" style="color: #666;">驾驶证状态</span>
+                        <span class="info-value" style="color: #10b981;">✅ 正常</span>
+                    </div>
+                    <div class="info-row" style="border-bottom-color: #e9ecef; color: #333;">
+                        <span class="info-label" style="color: #666;">档案编号</span>
+                        <span class="info-value">110112345678</span>
+                    </div>
+                    <div class="info-row" style="border-bottom-color: #e9ecef; color: #333;">
+                        <span class="info-label" style="color: #666;">体检有效期</span>
+                        <span class="info-value">2025-12-31</span>
+                    </div>
+                    <div class="info-row" style="border-bottom: none;">
+                        <span class="info-label" style="color: #666;">紧急联系人</span>
+                        <span class="info-value">张三 159****8888</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 驾驶统计卡片 -->
+            <div class="card license-card">
+                <div class="card-header">
+                    <h2>
+                        <span>📊</span>
+                        驾驶统计
+                    </h2>
+                    
+                </div>
+                <div class="stats-mini-grid">
+                    <div class="stat-mini-card">
+                        <div class="stat-mini-value">12,800</div>
+                        <div class="stat-mini-label">累计安全里程 (km)</div>
+                    </div>
+                    <div class="stat-mini-card">
+                        <div class="stat-mini-value">156</div>
+                        <div class="stat-mini-label">连续安全驾驶 (天)</div>
+                    </div>
+                    <div class="stat-mini-card">
+                        <div class="stat-mini-value">3,200</div>
+                        <div class="stat-mini-label">总行程数 (次)</div>
+                    </div>
+                    <div class="stat-mini-card">
+                        <div class="stat-mini-value">2</div>
+                        <div class="stat-mini-label">近12月违章 (次)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

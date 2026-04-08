@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史数据 - 驾驶安全评价系统</title>
+    <!-- ECharts CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Microsoft YaHei', 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f4f8;
+            min-height: 100vh;
+            padding: 32px 40px;
+        }
+
+        .analysis-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 页面标题 */
+        .page-header {
+            margin-bottom: 28px;
+        }
+
+        .page-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a2a3a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-header h1 span {
+            background: linear-gradient(135deg, #10b981, #059669);
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .page-header p {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 8px;
+            margin-left: 60px;
+        }
+
+        /* 筛选栏 */
+        .filter-bar {
+            background: white;
+            border-radius: 20px;
+            padding: 16px 24px;
+            margin-bottom: 28px;
+            display: flex;
+ align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .filter-select {
+            padding: 8px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        /* 卡片通用样式 */
+        .card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin-bottom: 28px;
+        }
+
+        .section-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a2a3a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-header h2 span {
+            font-size: 22px;
+        }
+
+        .section-header p {
+            font-size: 13px;
+            color: #6c757d;
+            margin-top: 6px;
+        }
+
+        /* 趋势图网格 - 2x2布局 */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            padding: 24px;
+        }
+
+        .chart-card {
+            background: #fafcff;
+            border-radius: 20px;
+            padding: 16px;
+            border: 1px solid #eef2f6;
+        }
+
+        .chart-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .threshold-badge {
+            font-size: 11px;
+            padding: 4px 10px;
+            background: #fef2f2;
+            color: #dc2626;
+            border-radius: 20px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 280px;
+        }
+
+        /* 历史数据汇总表格 */
+        .summary-table-wrapper {
+            overflow-x: auto;
+            padding: 0 24px 24px;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .summary-table th {
+            text-align: left;
+            padding: 14px 12px;
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            border-radius: 12px;
+        }
+
+        .summary-table td {
+            padding: 12px 12px;
+            border-bottom: 1px solid #e9ecef;
+            color: #334155;
+        }
+
+        .summary-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .summary-table tr:hover td {
+            background: #f8fafc;
+        }
+
+        /* 异常标红 */
+        .danger-value {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.warning-value {
+    color: #f97316;
+    font-weight: 600;
+}
+
+.normal-value {
+    color: #10b981;
+}
+
+        /* 历史驾驶建议 */
+        .history-suggestions {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .suggestion-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 20px 24px;
+            background: #f8fafc;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-card:hover {
+            background: #ecfdf5;
+            transform: translateX(4px);
+        }
+
+        .suggestion-icon {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .suggestion-content {
+            flex: 1;
+        }
+
+        .suggestion-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a2a3a;
+            margin-bottom: 6px;
+        }
+
+        .suggestion-desc {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .suggestion-meta {
+            font-size: 12px;
+            color: #10b981;
+            margin-top: 8px;
+            display: flex;
+            gap: 16px;
+        }
+
+        /* 汇总统计卡片 */
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            padding: 0 24px 24px;
+        }
+
+        .stat-mini-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-mini-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .stat-mini-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #1a2a3a;
+        }
+
+        .stat-mini-unit {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            body { padding: 20px; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .summary-stats { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="analysis-container">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h1>
+                <span>📈</span>
+                历史驾驶数据分析
+            </h1>
+            <p>查看各驾驶参数的变化趋势，超过安全阈值的数据已自动标红</p>
+        </div>
+
+        <!-- 筛选栏 -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <span class="filter-label">📅 时间范围：</span>
+                <select id="dateRange" class="filter-select">
+                    <option value="7">最近7天</option>
+                    <option value="14" selected>最近14天</option>
+                    <option value="30">最近30天</option>
+                    <option value="all">全部历史</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span style="font-size: 12px; color: #dc2626;">🔴 红色 = 超过安全阈值</span>
+                <span style="font-size: 12px; color: #f97316; margin-left: 12px;">🟠 橙色 = 接近阈值</span>
+            </div>
+        </div>
+
+        <!-- 趋势图区域 2x2 -->
+        <div class="card">
+            <div class="section-header">
+                <h2>
+                    <span>📉</span>
+                    驾驶参数趋势分析
+                </h2>
+                <p>各驾驶行为指标随时间变化的趋势曲线，异常点已自动标红</p>
+            </div>
+            <div class="charts-grid" id="chartsGrid">
+                <!-- 动态渲染4个图表 -->
+            </div>
+        </div>
+
+        <!-- 历史数据汇总表格 -->
+        <div class="card">
+            <div class="section-header">
+                <h2>
+                    <span>📋</span>
+                    历史数据汇总
+                </h2>
+                <p>每日驾驶行为详细记录，超过安全阈值的数据已标红</p>
+            </div>
+            <div class="summary-table-wrapper">
+                <table class="summary-table" id="summaryTable">
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>急加速<br><span style="font-weight:normal;">(次)</span></th>
+                            <th>急刹车<br><span style="font-weight:normal;">(次)</span></th>
+                            <th>急转弯<br><span style="font-weight:normal;">(次)</span></th>
+                            <th>超速占比<br><span style="font-weight:normal;">(%)</span></th>
+                            <th>疲劳驾驶<br><span style="font-weight:normal;">(次)</span></th>
+                            <th>违章<br><span style="font-weight:normal;">(次)</span></th>
+                            <th>安全分</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryTableBody">
+                        <!-- 动态渲染 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 历史数据汇总模块 - 统计卡片 -->
+        <div class="card">
+            <div class="section-header">
+                <h2>
+                    <span>📊</span>
+                    历史数据汇总统计
+                </h2>
+                <p>基于历史数据的整体统计分析</p>
+            </div>
+            <div class="summary-stats" id="summaryStats">
+                <!-- 动态渲染 -->
+            </div>
+        </div>
+
+        <!-- 历史驾驶建议 -->
+        <div class="card">
+            <div class="section-header">
+                <h2>
+                    <span>💡</span>
+                    历史驾驶行为总结与改进建议
+                </h2>
+                <p>基于历史数据的综合分析，为您提供长期驾驶改进方向</p>
+            </div>
+            <div style="padding: 0 24px 24px;">
+                <div id="historySuggestions" class="history-suggestions">
+                    <!-- 动态渲染 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 模拟历史数据（最近30天） ====================
+        function generateHistoryData(days = 30) {
+            const data = [];
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - days);
+            
+            for (let i = 0; i < days; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                const dateStr = currentDate.toISOString().slice(0, 10);
+                
+                // 模拟有一定规律的数据：周末和某些天数据较差
+                const dayOfWeek = currentDate.getDay();
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                const randomFactor = isWeekend ? 1.5 : 0.8;
+                
+                // 安全阈值：急加速>8次，急刹车>6次，急转弯>8次，超速>10%
+                const harshAccel = Math.floor(Math.random() * 15 * randomFactor) + (isWeekend ? 3 : 1);
+                const harshDecel = Math.floor(Math.random() * 12 * randomFactor) + (isWeekend ? 2 : 1);
+                const harshTurn = Math.floor(Math.random() * 12 * randomFactor) + (isWeekend ? 2 : 1);
+                const speedRatio = Math.floor(Math.random() * 20 * randomFactor) + (isWeekend ? 2 : 0);
+                const fatigueRisk = Math.random() > 0.85 ? 1 : 0;
+                const violation = Math.random() > 0.9 ? 1 : 0;
+                
+                // 计算安全分
+                let score = 100;
+                score -= Math.min(60, harshAccel * 4);
+                score -= Math.min(70, harshDecel * 5);
+                score -= Math.min(50, harshTurn * 3);
+                score -= Math.min(30, speedRatio);
+                score -= fatigueRisk * 10;
+                score -= violation * 15;
+                score = Math.max(0, Math.min(100, Math.round(score)));
+                
+                data.push({
+                    date: dateStr,
+                    harshAccel: harshAccel,
+                    harshDecel: harshDecel,
+                    harshTurn: harshTurn,
+                    speedRatio: speedRatio,
+                    fatigueRisk: fatigueRisk,
+                    violation: violation,
+                    safetyScore: score
+                });
+            }
+            return data;
+        }
+
+        // 安全阈值定义
+        const THRESHOLDS = {
+            harshAccel: { danger: 8, warning: 5 },    // 急加速 >8 危险，>5 警告
+            harshDecel: { danger: 6, warning: 4 },     // 急刹车 >6 危险，>4 警告
+            harshTurn: { danger: 8, warning: 5 },      // 急转弯 >8 危险，>5 警告
+            speedRatio: { danger: 10, warning: 6 },    // 超速占比 >10% 危险，>6% 警告
+            fatigueRisk: { danger: 1, warning: 0 },    // 疲劳驾驶 >=1 危险
+            violation: { danger: 1, warning: 0 }       // 违章 >=1 危险
+        };
+
+        // 获取值的样式类
+        function getValueStyle(value, type) {
+            const threshold = THRESHOLDS[type];
+            if (!threshold) return 'normal-value';
+            if (value >= threshold.danger) return 'danger-value';
+            if (value >= threshold.warning) return 'warning-value';
+            return 'normal-value';
+        }
+
+        // 获取显示HTML
+        function getValueHtml(value, type) {
+            const style = getValueStyle(value, type);
+            return `<span class="${style}">${value}</span>`;
+        }
+
+        // 生成模拟历史数据
+        let historyData = generateHistoryData(30);
+
+        // ==================== 渲染趋势图 ====================
+        function renderCharts(data, dateRange) {
+            const chartsGrid = document.getElementById('chartsGrid');
+            const filteredData = dateRange === 'all' ? data : data.slice(-parseInt(dateRange));
+            const dates = filteredData.map(d => d.date.slice(5));
+            
+            // 定义四个图表配置
+            const chartsConfig = [
+                { id: 'chartAccel', title: '急加速趋势', unit: '次', key: 'harshAccel', type: 'harshAccel', color: '#ef4444', yName: '急加速次数' },
+                { id: 'chartDecel', title: '急刹车趋势', unit: '次', key: 'harshDecel', type: 'harshDecel', color: '#10b981', yName: '急刹车次数' },
+                { id: 'chartTurn', title: '急转弯趋势', unit: '次', key: 'harshTurn', type: 'harshTurn', color: '#8b5cf6', yName: '急转弯次数' },
+                { id: 'chartSpeed', title: '超速占比趋势', unit: '%', key: 'speedRatio', type: 'speedRatio', color: '#06b6d4', yName: '超速占比' }
+            ];
+
+            let chartsHtml = '';
+            for (const config of chartsConfig) {
+                const values = filteredData.map(d => d[config.key]);
+                const threshold = THRESHOLDS[config.type];
+                
+                chartsHtml += `
+                    <div class="chart-card">
+                        <div class="chart-title">
+                            <span>${config.title}</span>
+                            <span class="threshold-badge">安全阈值 < ${threshold.danger}${config.unit}</span>
+                        </div>
+                        <div id="${config.id}" class="chart-container"></div>
+                    </div>
+                `;
+            }
+            chartsGrid.innerHTML = chartsHtml;
+            
+            // 渲染每个图表
+            for (const config of chartsConfig) {
+                const values = filteredData.map(d => d[config.key]);
+                const dates = filteredData.map(d => d.date.slice(5));
+                const threshold = THRESHOLDS[config.type];
+                
+                // 找出异常点
+                const markPoints = [];
+                values.forEach((val, idx) => {
+                    if (val >= threshold.danger) {
+                        markPoints.push({ coord: [idx, val], value: val, symbol: 'circle', symbolSize: 10, itemStyle: { color: '#dc2626' } });
+                    }
+                });
+                
+                const chart = echarts.init(document.getElementById(config.id));
+                chart.setOption({
+                    tooltip: { trigger: 'axis', formatter: `{b}<br/>${config.title}: {c} ${config.unit}` },
+                    grid: { left: '10%', right: '8%', top: '15%', bottom: '8%', containLabel: true },
+                    xAxis: { type: 'category', data: dates, axisLabel: { rotate: 45, fontSize: 10, interval: Math.floor(dates.length / 10) } },
+                    yAxis: { type: 'value', name: config.yName, nameLocation: 'middle', nameGap: 40 },
+                    series: [{
+                        data: values,
+                        type: 'line',
+                        smooth: true,
+                        lineStyle: { color: config.color, width: 2 },
+                        areaStyle: { opacity: 0.1, color: config.color },
+                        symbol: 'circle',
+                        symbolSize: 6,
+                        itemStyle: {
+                            color: (params) => {
+                                const val = params.value;
+                                if (val >= threshold.danger) return '#dc2626';
+                                if (val >= threshold.warning) return '#f97316';
+                                return config.color;
+                            }
+                        },
+                        markPoint: {
+                            data: markPoints,
+                            symbolSize: 50,
+                            label: { formatter: '{c}', color: '#fff', backgroundColor: '#dc2626', borderRadius: 10, padding: [2, 6] }
+                        },
+                        markLine: {
+                            data: [{ yAxis: threshold.danger, name: '危险阈值', lineStyle: { color: '#dc2626', type: 'dashed', width: 1.5 } }],
+                            label: { formatter: '危险阈值', position: 'end' }
+                        }
+                    }]
+                });
+            }
+        }
+
+        // ==================== 渲染汇总表格 ====================
+        function renderSummaryTable(data, dateRange) {
+            const tbody = document.getElementById('summaryTableBody');
+            const filteredData = dateRange === 'all' ? data : data.slice(-parseInt(dateRange));
+            // 倒序显示（最近的在最上面）
+            const reversedData = [...filteredData].reverse();
+            
+            let html = '';
+            for (const d of reversedData) {
+                html += `
+                    <tr>
+                        <td style="font-weight: 500;">${d.date}</td>
+                        <td>${getValueHtml(d.harshAccel, 'harshAccel')}</td>
+                        <td>${getValueHtml(d.harshDecel, 'harshDecel')}</td>
+                        <td>${getValueHtml(d.harshTurn, 'harshTurn')}</td>
+                        <td>${getValueHtml(d.speedRatio, 'speedRatio')}</td>
+                        <td>${d.fatigueRisk === 1 ? '<span class="danger-value">⚠️ 是</span>' : '否'}</td>
+                        <td>${d.violation === 1 ? '<span class="danger-value">⚠️ 有</span>' : '无'}</td>
+                        <td><strong>${d.safetyScore}</strong> 分</td>
+                    </tr>
+                `;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // ==================== 渲染汇总统计 ====================
+        function renderSummaryStats(data, dateRange) {
+            const container = document.getElementById('summaryStats');
+            const filteredData = dateRange === 'all' ? data : data.slice(-parseInt(dateRange));
+            
+            const totalAccel = filteredData.reduce((s, d) => s + d.harshAccel, 0);
+            const totalDecel = filteredData.reduce((s, d) => s + d.harshDecel, 0);
+            const totalTurn = filteredData.reduce((s, d) => s + d.harshTurn, 0);
+            const avgSpeed = (filteredData.reduce((s, d) => s + d.speedRatio, 0) / filteredData.length).toFixed(1);
+            const avgScore = Math.round(filteredData.reduce((s, d) => s + d.safetyScore, 0) / filteredData.length);
+            const dangerDays = filteredData.filter(d => d.harshAccel >= THRESHOLDS.harshAccel.danger || 
+                                                         d.harshDecel >= THRESHOLDS.harshDecel.danger || 
+                                                         d.harshTurn >= THRESHOLDS.harshTurn.danger).length;
+            
+            container.innerHTML = `
+                <div class="stat-mini-card">
+                    <div class="stat-mini-label">总急加速</div>
+                    <div class="stat-mini-value">${totalAccel}</div>
+                    <div class="stat-mini-unit">次</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-label">总急刹车</div>
+                    <div class="stat-mini-value">${totalDecel}</div>
+                    <div class="stat-mini-unit">次</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-label">总急转弯</div>
+                    <div class="stat-mini-value">${totalTurn}</div>
+                    <div class="stat-mini-unit">次</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-label">平均超速占比</div>
+                    <div class="stat-mini-value">${avgSpeed}</div>
+                    <div class="stat-mini-unit">%</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-label">平均安全分</div>
+                    <div class="stat-mini-value">${avgScore}</div>
+                    <div class="stat-mini-unit">分</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-label">危险驾驶天数</div>
+                    <div class="stat-mini-value">${dangerDays}</div>
+                    <div class="stat-mini-unit">天</div>
+                </div>
+            `;
+        }
+
+        // ==================== 生成历史驾驶建议 ====================
+        function generateHistorySuggestions(data, dateRange) {
+            const container = document.getElementById('historySuggestions');
+            const filteredData = dateRange === 'all' ? data : data.slice(-parseInt(dateRange));
+            
+            // 统计分析
+            const totalAccel = filteredData.reduce((s, d) => s + d.harshAccel, 0);
+            const totalDecel = filteredData.reduce((s, d) => s + d.harshDecel, 0);
+            const totalTurn = filteredData.reduce((s, d) => s + d.harshTurn, 0);
+            const avgSpeed = filteredData.reduce((s, d) => s + d.speedRatio, 0) / filteredData.length;
+            const avgScore = filteredData.reduce((s, d) => s + d.safetyScore, 0) / filteredData.length;
+            const fatigueDays = filteredData.filter(d => d.fatigueRisk === 1).length;
+            const violationDays = filteredData.filter(d => d.violation === 1).length;
+            
+            const daysCount = filteredData.length;
+            const accelPerDay = (totalAccel / daysCount).toFixed(1);
+            const decelPerDay = (totalDecel / daysCount).toFixed(1);
+            
+            const suggestions = [];
+            
+            // 综合评估
+            if (avgScore >= 80) {
+                suggestions.push({
+                    icon: '🏆',
+                    title: '综合表现优秀',
+                    desc: `在统计周期内，您的平均安全得分为${avgScore.toFixed(0)}分，驾驶行为整体表现优秀。`,
+                    meta: `超出平均线，继续保持`
+                });
+            } else if (avgScore >= 60) {
+                suggestions.push({
+                    icon: '📊',
+                    title: '综合表现良好，有提升空间',
+                    desc: `在统计周期内，您的平均安全得分为${avgScore.toFixed(0)}分，部分指标需要关注和改进。`,
+                    meta: `平均分${avgScore.toFixed(0)}分，安全驾驶习惯待加强`
+                });
+            } else {
+                suggestions.push({
+                    icon: '⚠️',
+                    title: '综合表现待改进',
+                    desc: `在统计周期内，您的平均安全得分为${avgScore.toFixed(0)}分，存在较多不安全驾驶行为，建议重点关注。`,
+                    meta: `多项指标超过安全阈值，急需改善`
+                });
+            }
+            
+            // 急加速分析
+            if (totalAccel > daysCount * 5) {
+                suggestions.push({
+                    icon: '🚀',
+                    title: '急加速频率偏高',
+                    desc: `统计周期内共发生${totalAccel}次急加速，平均每天${accelPerDay}次。急加速会增加油耗和事故风险。`,
+                    meta: `建议：平稳起步，避免猛踩油门`
+                });
+            }
+            
+            // 急刹车分析
+            if (totalDecel > daysCount * 4) {
+                suggestions.push({
+                    icon: '🛑',
+                    title: '急刹车次数较多',
+                    desc: `统计周期内共发生${totalDecel}次急刹车，平均每天${decelPerDay}次。急刹车往往意味着跟车过近或注意力不集中。`,
+                    meta: `建议：保持安全车距，提前预判路况`
+                });
+            }
+            
+            // 超速分析
+            if (avgSpeed > 8) {
+                suggestions.push({
+                    icon: '📈',
+                    title: '超速行为需警惕',
+                    desc: `统计周期内平均超速占比${avgSpeed.toFixed(1)}%，超速是交通事故的主要诱因之一。`,
+                    meta: `建议：严格遵守限速规定`
+                });
+            }
+            
+            // 疲劳驾驶分析
+            if (fatigueDays > 0) {
+                suggestions.push({
+                    icon: '😴',
+                    title: '疲劳驾驶提醒',
+                    desc: `统计周期内检测到${fatigueDays}天存在疲劳驾驶风险，疲劳驾驶会严重影响反应能力。`,
+                    meta: `建议：保证充足休息，避免长时间连续驾驶`
+                });
+            }
+            
+            // 违章分析
+            if (violationDays > 0) {
+                suggestions.push({
+                    icon: '📋',
+                    title: '交通违章记录',
+                    desc: `统计周期内共有${violationDays}天存在违章记录，违章行为会增加事故风险和法律成本。`,
+                    meta: `建议：遵守交通规则，安全文明驾驶`
+                });
+            }
+            
+            // 整体改进建议
+            if (suggestions.length <= 2) {
+                suggestions.push({
+                    icon: '✅',
+                    title: '继续保持良好习惯',
+                    desc: '您的驾驶行为整体表现良好，各项指标均在正常范围内。请继续保持安全驾驶习惯。',
+                    meta: '安全驾驶，平安出行'
+                });
+            } else {
+                suggestions.push({
+                    icon: '🎯',
+                    title: '整体改进方向',
+                    desc: '建议您重点关注急加速和急刹车的控制，同时注意车速管理和疲劳驾驶预防。定期查看驾驶报告，持续改进。',
+                    meta: '坚持21天养成良好驾驶习惯'
+                });
+            }
+            
+            const html = suggestions.map(s => `
+                <div class="suggestion-card">
+                    <div class="suggestion-icon">${s.icon}</div>
+                    <div class="suggestion-content">
+                        <div class="suggestion-title">${s.title}</div>
+                        <div class="suggestion-desc">${s.desc}</div>
+                        <div class="suggestion-meta">${s.meta}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // ==================== 刷新所有模块 ====================
+        function refreshAll() {
+            const dateRange = document.getElementById('dateRange').value;
+            
+            
+            renderCharts(historyData, dateRange);
+            renderSummaryTable(historyData, dateRange);
+            renderSummaryStats(historyData, dateRange);
+            generateHistorySuggestions(historyData, dateRange);
+        }
+
+        // 监听筛选变化
+        document.getElementById('dateRange').addEventListener('change', refreshAll);
+        // 初始化
+        refreshAll();
+    </script>
+</body>
+</html>
