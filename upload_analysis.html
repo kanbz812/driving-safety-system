@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>智驾分析中心 | 驾驶安全评价系统</title>
+    <!-- ECharts CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Microsoft YaHei', 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f4f8;
+            min-height: 100vh;
+            padding: 28px 32px;
+        }
+
+        /* 一体化主容器 */
+        .unified-dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 头部+上传融合区 */
+        .hero-section {
+            background: linear-gradient(135deg, #1a8c3a 0%, #0d5c26 100%);
+            border-radius: 32px;
+            padding: 24px 32px 28px;
+            margin-bottom: 32px;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+            transition: all 0.2s;
+        }
+
+        .hero-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .title-badge {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .title-badge .logo-emblem {
+            background: rgba(255,255,255,0.2);
+            width: 54px;
+            height: 54px;
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            backdrop-filter: blur(2px);
+        }
+
+        .title-badge h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.3px;
+        }
+
+        .title-badge p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.85);
+            margin-top: 4px;
+        }
+
+        .upload-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-glass {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px 22px;
+            border-radius: 48px;
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+
+        .btn-glass:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary-solid {
+            background: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 48px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a8c3a;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary-solid:hover {
+            background: #f0fdf4;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+        }
+
+        .upload-stats-chip {
+            background: rgba(0,0,0,0.2);
+            border-radius: 60px;
+            padding: 6px 16px;
+            font-size: 13px;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(4px);
+        }
+
+        /* 数据概览卡片组 */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .overview-card {
+            background: white;
+            border-radius: 28px;
+            padding: 20px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            transition: all 0.2s;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .overview-card:hover { transform: translateY(-3px); box-shadow: 0 16px 28px rgba(0, 0, 0, 0.08); }
+
+        .overview-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        .icon-bg-blue { background: #eef2ff; color: #3b82f6; }
+        .icon-bg-green { background: #ecfdf5; color: #10b981; }
+        .icon-bg-orange { background: #fff7ed; color: #f97316; }
+        .icon-bg-purple { background: #f5f3ff; color: #8b5cf6; }
+
+        .overview-label { font-size: 13px; color: #6c757d; margin-bottom: 6px; }
+        .overview-value { font-size: 30px; font-weight: 800; color: #1e293b; line-height: 1.2; }
+        .overview-unit { font-size: 14px; font-weight: 400; color: #94a3b8; margin-left: 4px; }
+        .overview-sub { font-size: 12px; margin-top: 8px; }
+
+        /* 统计表格模块 */
+        .stats-table-section {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            margin-bottom: 32px;
+            overflow: hidden;
+            border: 1px solid #edf2f7;
+        }
+
+        .section-header {
+            padding: 20px 28px 12px;
+            border-bottom: 1px solid #eef2f6;
+        }
+        .section-header h2 { font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+        .section-header p { font-size: 13px; color: #5b6e8c; margin-top: 6px; }
+
+        .stats-table-wrapper { overflow-x: auto; padding: 0 24px 24px; }
+        .stats-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .stats-table th { text-align: left; padding: 14px 12px; background: #f8fafc; color: #334155; font-weight: 600; border-radius: 14px; }
+        .stats-table td { padding: 12px 12px; border-bottom: 1px solid #ecf3f9; color: #1e293b; }
+        .stats-table tr:last-child td { border-bottom: none; }
+
+        .score-tag { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 12px; font-weight: 600; }
+        .score-high { background: #e0f2e9; color: #0b5e42; }
+        .score-medium { background: #ffefdb; color: #b45309; }
+        .score-low { background: #ffe5e5; color: #b91c1c; }
+
+        .threshold-note {
+            background: #fafcff;
+            border-radius: 20px;
+            padding: 14px 24px;
+            margin: 0 24px 24px;
+            font-size: 12px;
+            color: #4b5563;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            border-left: 3px solid #10b981;
+        }
+
+        /* 雷达图 + 建议双栏 */
+        .evaluation-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+        .radar-card, .suggestions-card {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            border: 1px solid #edf2f7;
+            overflow: hidden;
+        }
+        .radar-container { width: 100%; height: 320px; padding: 12px; }
+        .suggestions-list { padding: 12px 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+        .suggestion-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            background: #fafdff;
+            padding: 14px 18px;
+            border-radius: 24px;
+            transition: 0.2s;
+            border: 1px solid #f0f4fa;
+        }
+        .suggestion-item:hover { background: #f1f9f0; transform: translateX(4px); }
+        .suggestion-icon { width: 44px; height: 44px; background: white; border-radius: 30px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .suggestion-content { flex: 1; }
+        .suggestion-title { font-weight: 700; font-size: 15px; color: #0f172a; }
+        .suggestion-desc { font-size: 12.5px; color: #5b6e8c; margin-top: 4px; line-height: 1.4; }
+        .suggestion-level { font-size: 11px; padding: 4px 12px; border-radius: 50px; font-weight: 600; }
+        .level-high { background: #fee2e2; color: #b91c1c; }
+        .level-medium { background: #fff0db; color: #b45309; }
+        .level-low { background: #e0f2e9; color: #0b5e42; }
+
+        .total-score-card {
+            background: linear-gradient(105deg, #10b981, #047857);
+            border-radius: 20px;
+            padding: 16px;
+            text-align: center;
+            margin: 0 20px 20px;
+        }
+        .total-score-label { font-size: 13px; color: rgba(255,255,255,0.85); }
+        .total-score-value { font-size: 44px; font-weight: 800; color: white; line-height: 1; }
+        .driving-style { margin-top: 8px; background: rgba(255,255,255,0.2); border-radius: 30px; display: inline-block; padding: 4px 18px; font-size: 13px; color: white; }
+
+        @media (max-width: 1000px) {
+            body { padding: 20px; }
+            .overview-grid { grid-template-columns: repeat(2,1fr); }
+            .evaluation-section { grid-template-columns: 1fr; }
+            .hero-header { flex-direction: column; align-items: flex-start; }
+        }
+        @media (max-width: 550px) {
+            .overview-grid { grid-template-columns: 1fr; }
+        }
+        .toast-message {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1e293b;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 60px;
+            font-size: 13px;
+            z-index: 2000;
+            opacity: 0;
+            transition: 0.2s;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .toast-message.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .toast-message.error { background: #dc2626; }
+        .toast-message.success { background: #10b981; }
+    </style>
+</head>
+
+<body>
+<div class="unified-dashboard">
+    <!-- 一体化头部 + 上传控件 -->
+    <div class="hero-section">
+        <div class="hero-header">
+            <div class="title-badge">
+                <div class="logo-emblem">🚗</div>
+                <div>
+                    <h1>驾驶安全分析平台</h1>
+                    
+                </div>
+            </div>
+            <div class="upload-actions">
+                <button class="btn-primary-solid" id="selectFileBtn">📂 选择文件</button>
+                <button class="btn-glass" id="demoFiveBtn">📋 加载演示数据</button>
+                <div class="upload-stats-chip" id="dataStatusBadge">📎 等待上传</div>
+            </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 6px;">
+            <div style="font-size: 13px; color: rgba(255,255,255,0.8);">支持 CSV / JSON 格式，拖拽或点击上传，自动更新分析结果</div>
+            
+        </div>
+        <input type="file" id="fileInput" accept=".csv,.json" style="display: none;">
+    </div>
+
+    <!-- 数据概览卡片 -->
+    <div class="overview-grid" id="overviewGrid"></div>
+
+    <!-- 驾驶行为统计表格 -->
+    <div class="stats-table-section">
+        <div class="section-header">
+            <h2><span>📋</span> 驾驶行为统计与评分明细</h2>
+            <p>基于各维度异常次数与阈值，自动计算扣分及安全评级</p>
+        </div>
+        <div class="stats-table-wrapper">
+            <table class="stats-table" id="statsTable">
+                <thead><tr><th>驾驶行为</th><th>检测次数</th><th>判定阈值</th><th>单项得分</th><th>评级</th><th>扣分规则</th><th>说明</th></tr></thead>
+                <tbody id="statsTableBody"></tbody>
+            </table>
+        </div>
+        <div class="threshold-note" id="thresholdNote"></div>
+    </div>
+
+    <!-- 综合评价区域 -->
+    <div class="evaluation-section">
+        <div class="radar-card">
+            <div class="section-header" style="border-bottom: none; padding-bottom: 0;">
+                <h2><span>🎯</span> 驾驶能力雷达图</h2>
+                <p>六维评分 (满分100)</p>
+            </div>
+            <div id="radarChart" class="radar-container"></div>
+        </div>
+        <div class="suggestions-card">
+            <div class="section-header" style="border-bottom: none;">
+                <h2><span>💡</span> 安全驾驶建议</h2>
+                <p>个性化改进方向</p>
+            </div>
+            <div id="suggestionsList" class="suggestions-list"></div>
+        </div>
+    </div>
+</div>
+<div id="toastRoot"></div>
+
+<script>
+    // ---------- 1. 五份独立演示数据（可直接演示）----------
+    const FIVE_DEMO_DATASETS = [
+        { name: "温和通勤型", records: [
+            { acceleration: 1.2, deceleration: 1.1, lateralAccel: 0.6, speedRatio: 2, fatigueRisk: 0, violation: 0 },
+            { acceleration: 1.5, deceleration: 1.3, lateralAccel: 0.9, speedRatio: 3, fatigueRisk: 0, violation: 0 },
+            { acceleration: 1.0, deceleration: 1.4, lateralAccel: 0.7, speedRatio: 1, fatigueRisk: 0, violation: 0 },
+            { acceleration: 1.8, deceleration: 1.9, lateralAccel: 1.0, speedRatio: 4, fatigueRisk: 0, violation: 0 },
+            { acceleration: 2.0, deceleration: 2.0, lateralAccel: 1.1, speedRatio: 2, fatigueRisk: 0, violation: 0 }
+        ]},
+        { name: "偶尔激进型", records: [
+            { acceleration: 3.0, deceleration: 2.9, lateralAccel: 2.1, speedRatio: 12, fatigueRisk: 0, violation: 0 },
+            { acceleration: 2.4, deceleration: 3.3, lateralAccel: 1.9, speedRatio: 8, fatigueRisk: 0, violation: 1 },
+            { acceleration: 1.9, deceleration: 2.2, lateralAccel: 1.5, speedRatio: 5, fatigueRisk: 0, violation: 0 },
+            { acceleration: 3.4, deceleration: 2.7, lateralAccel: 2.3, speedRatio: 14, fatigueRisk: 0, violation: 0 },
+            { acceleration: 2.2, deceleration: 2.5, lateralAccel: 1.7, speedRatio: 9, fatigueRisk: 0, violation: 0 }
+        ]},
+        { name: "高风险高频次", records: [
+            { acceleration: 4.1, deceleration: 4.3, lateralAccel: 2.9, speedRatio: 22, fatigueRisk: 1, violation: 2 },
+            { acceleration: 3.7, deceleration: 3.9, lateralAccel: 2.5, speedRatio: 18, fatigueRisk: 0, violation: 1 },
+            { acceleration: 3.2, deceleration: 3.5, lateralAccel: 2.2, speedRatio: 20, fatigueRisk: 1, violation: 0 },
+            { acceleration: 4.0, deceleration: 3.8, lateralAccel: 2.8, speedRatio: 25, fatigueRisk: 1, violation: 1 },
+            { acceleration: 3.5, deceleration: 3.2, lateralAccel: 2.3, speedRatio: 19, fatigueRisk: 0, violation: 2 }
+        ]},
+        { name: "疲劳驾驶倾向", records: [
+            { acceleration: 2.1, deceleration: 2.4, lateralAccel: 1.3, speedRatio: 7, fatigueRisk: 1, violation: 0 },
+            { acceleration: 2.3, deceleration: 2.9, lateralAccel: 1.8, speedRatio: 9, fatigueRisk: 1, violation: 0 },
+            { acceleration: 1.9, deceleration: 2.1, lateralAccel: 1.2, speedRatio: 5, fatigueRisk: 1, violation: 0 },
+            { acceleration: 2.7, deceleration: 2.6, lateralAccel: 1.7, speedRatio: 8, fatigueRisk: 1, violation: 0 },
+            { acceleration: 2.0, deceleration: 2.3, lateralAccel: 1.4, speedRatio: 6, fatigueRisk: 1, violation: 0 }
+        ]},
+        { name: "违章&超速突出", records: [
+            { acceleration: 2.5, deceleration: 2.4, lateralAccel: 1.5, speedRatio: 16, fatigueRisk: 0, violation: 3 },
+            { acceleration: 2.8, deceleration: 2.9, lateralAccel: 1.9, speedRatio: 18, fatigueRisk: 0, violation: 2 },
+            { acceleration: 2.2, deceleration: 2.5, lateralAccel: 1.4, speedRatio: 15, fatigueRisk: 0, violation: 1 },
+            { acceleration: 3.0, deceleration: 2.7, lateralAccel: 1.8, speedRatio: 20, fatigueRisk: 0, violation: 2 },
+            { acceleration: 2.6, deceleration: 2.8, lateralAccel: 1.6, speedRatio: 14, fatigueRisk: 0, violation: 4 }
+        ]}
+    ];
+    let demoIndex = 0;  // 用于记录当前是第几次点击
+    // 合并五份演示数据为一个完整记录集 (供演示按钮使用，展示更多样本)
+    function getMergedDemoRecords() {
+        let merged = [];
+        for (let ds of FIVE_DEMO_DATASETS) {
+            merged.push(...ds.records);
+        }
+        return merged;
+    }
+
+    // ---------- 2. 数据分析核心 (与之前逻辑一致，但完整保留评分机制) ----------
+    function calculateScores(records) {
+        if (!records || records.length === 0) {
+            return {
+                radarScores: [0,0,0,0,0,0], rawData: { harshAccel:0, harshDecel:0, harshTurn:0, speedRatio:0, fatigueEvents:0, violations:0 },
+                totalScore:0, recordCount:0, avgAccel:0, avgDecel:0, avgLateral:0, maxAccel:0, maxDecel:0
+            };
+        }
+        let accelCount=0, decelCount=0, turnCount=0;
+        let totalSpeedRatio=0, fatigueCount=0, violationCount=0;
+        let totalAccel=0, totalDecel=0, totalLateral=0, maxAccel=0, maxDecel=0;
+        for (let r of records) {
+            if (r.acceleration > 2.5) accelCount++;
+            if (r.deceleration > 2.5) decelCount++;
+            if (r.lateralAccel > 2.0) turnCount++;
+            if (r.speedRatio) totalSpeedRatio += r.speedRatio;
+            if (r.fatigueRisk === 1 || r.fatigueRisk === true) fatigueCount++;
+            if (r.violation && r.violation > 0) violationCount += r.violation;
+            totalAccel += r.acceleration || 0;
+            totalDecel += r.deceleration || 0;
+            totalLateral += r.lateralAccel || 0;
+            if (r.acceleration > maxAccel) maxAccel = r.acceleration;
+            if (r.deceleration > maxDecel) maxDecel = r.deceleration;
+        }
+        const n = records.length;
+        const avgSpeedRatio = n>0 ? Math.min(35, Math.round(totalSpeedRatio / n)) : 0;
+        const accelScore = Math.max(0, 100 - Math.min(60, accelCount * 4));
+        const decelScore = Math.max(0, 100 - Math.min(70, decelCount * 5));
+        const turnScore = Math.max(0, 100 - Math.min(50, turnCount * 3));
+        const speedScore = Math.max(0, 100 - avgSpeedRatio);
+        const fatigueScore = Math.max(0, 100 - Math.min(50, fatigueCount * 10));
+        const violationScore = Math.max(0, 100 - Math.min(80, violationCount * 15));
+        const radarScores = [accelScore, decelScore, turnScore, speedScore, fatigueScore, violationScore];
+        const totalScore = Math.round(radarScores.reduce((a,b)=>a+b,0)/6);
+        return {
+            radarScores, rawData: { harshAccel: accelCount, harshDecel: decelCount, harshTurn: turnCount, speedRatio: avgSpeedRatio, fatigueEvents: fatigueCount, violations: violationCount },
+            totalScore, recordCount: n, avgAccel: (totalAccel/n).toFixed(2), avgDecel: (totalDecel/n).toFixed(2), avgLateral: (totalLateral/n).toFixed(2), maxAccel: maxAccel.toFixed(2), maxDecel: maxDecel.toFixed(2)
+        };
+    }
+    function getScoreStyle(score) {
+        if (score>=80) return {class:'score-high', text:'优秀'};
+        if (score>=60) return {class:'score-medium', text:'良好'};
+        return {class:'score-low', text:'待改进'};
+    }
+    function generateSuggestions(scores, rawData) {
+        let arr = [];
+        if (rawData.harshDecel > 8) arr.push({ icon:'⚠️', title:'急刹车频繁', desc:`共${rawData.harshDecel}次急刹，保持车距，提前预判`, level:'high', levelText:'紧急' });
+        else if (rawData.harshDecel > 3) arr.push({ icon:'⚠️', title:'急刹车需注意', desc:`${rawData.harshDecel}次急刹，平稳减速更安全`, level:'medium', levelText:'关注' });
+        if (rawData.harshAccel > 12) arr.push({ icon:'⚡', title:'急加速较多', desc:`${rawData.harshAccel}次急加速，平稳起步更经济安全`, level:'high', levelText:'紧急' });
+        else if (rawData.harshAccel > 5) arr.push({ icon:'⚡', title:'急加速略多', desc:`控制油门，减少急加速`, level:'medium', levelText:'关注' });
+        if (rawData.harshTurn > 8) arr.push({ icon:'🔄', title:'转弯速度过快', desc:`急转弯${rawData.harshTurn}次，入弯减速`, level:'high', levelText:'紧急' });
+        else if (rawData.harshTurn > 3) arr.push({ icon:'🔄', title:'转弯平稳性待提升', desc:`过弯控制车速，提升稳定性`, level:'medium', levelText:'关注' });
+        if (rawData.speedRatio > 18) arr.push({ icon:'📈', title:'超速占比过高', desc:`超速占比${rawData.speedRatio}%，严守限速`, level:'high', levelText:'紧急' });
+        else if (rawData.speedRatio > 9) arr.push({ icon:'📈', title:'超速需留意', desc:`超速占比${rawData.speedRatio}%，控制车速`, level:'medium', levelText:'关注' });
+        if (rawData.fatigueEvents > 0) arr.push({ icon:'😴', title:'疲劳驾驶风险', desc:`检测到${rawData.fatigueEvents}次疲劳，请充分休息`, level:'high', levelText:'紧急' });
+        if (rawData.violations > 0) arr.push({ icon:'📋', title:'违章记录', desc:`${rawData.violations}次违章，请遵守交规`, level:'high', levelText:'紧急' });
+        if (arr.length === 0) arr.push({ icon:'✅', title:'驾驶行为优秀', desc:'所有指标均良好，继续保持安全习惯', level:'low', levelText:'优秀' });
+        return arr;
+    }
+
+    // 渲染整个界面
+    let currentRadarChart = null;
+    function renderFullDashboard(records, sourceLabel = "演示数据") {
+        if (!records || records.length === 0) {
+            showToast("无有效数据，请重新上传", "error");
+            return;
+        }
+        const scores = calculateScores(records);
+        const raw = scores.rawData;
+        const drivingStyle = scores.totalScore >= 80 ? { text: "安全型驾驶", color: "#10b981" } : (scores.totalScore >= 60 ? { text: "标准型驾驶", color: "#f97316" } : { text: "激进型驾驶", color: "#ef4444" });
+        const suggestions = generateSuggestions(scores, raw);
+        // 更新顶部状态
+        document.getElementById('dataStatusBadge').innerHTML = `📊 当前演示数据: ${sourceLabel} (${scores.recordCount}条)`;
+        // 概览卡片
+        document.getElementById('overviewGrid').innerHTML = `
+            <div class="overview-card"><div class="overview-icon icon-bg-blue">📁</div><div class="overview-label">数据来源</div><div class="overview-value">${sourceLabel}</div><div class="overview-sub">${scores.recordCount} 条记录</div></div>
+            <div class="overview-card"><div class="overview-icon icon-bg-green">🏆</div><div class="overview-label">综合安全分</div><div class="overview-value">${scores.totalScore}<span class="overview-unit">/100</span></div><div class="overview-sub" style="color:${drivingStyle.color}">${drivingStyle.text}</div></div>
+            <div class="overview-card"><div class="overview-icon icon-bg-orange">📅</div><div class="overview-label">分析时间</div><div class="overview-value" style="font-size: 18px;">${new Date().toLocaleDateString()}</div><div class="overview-sub">实时更新</div></div>
+            <div class="overview-card"><div class="overview-icon icon-bg-purple">📏</div><div class="overview-label">平均加/减速度</div><div class="overview-value" style="font-size: 22px;">${scores.avgAccel} / ${scores.avgDecel}</div><div class="overview-sub">m/s² · 峰值 ${scores.maxAccel}/${scores.maxDecel}</div></div>
+        `;
+        // 表格动态渲染
+        const items = [
+            { name:' 急加速', key:'harshAccel', count:raw.harshAccel, threshold:'>2.5 m/s²', score:scores.radarScores[0], weight:'每次扣4分', desc:'起步过猛' },
+            { name:' 急刹车', key:'harshDecel', count:raw.harshDecel, threshold:'>2.5 m/s²', score:scores.radarScores[1], weight:'每次扣5分', desc:'紧急制动' },
+            { name:' 急转弯', key:'harshTurn', count:raw.harshTurn, threshold:'>2.0 m/s²', score:scores.radarScores[2], weight:'每次扣3分', desc:'转弯过快' },
+            { name:' 超速占比', key:'speedRatio', count:raw.speedRatio+'%', threshold:'限速以上', score:scores.radarScores[3], weight:'1%扣1分', desc:'超速行驶' },
+            { name:' 疲劳驾驶', key:'fatigueEvents', count:raw.fatigueEvents, threshold:'连续驾驶>4h', score:scores.radarScores[4], weight:'每次扣10分', desc:'注意力下降' },
+            { name:' 规则遵守', key:'violations', count:raw.violations, threshold:'交通违章', score:scores.radarScores[5], weight:'每次扣15分', desc:'违章记录' }
+        ];
+        let tbodyHtml = '';
+        items.forEach((it, idx) => {
+            const style = getScoreStyle(it.score);
+            tbodyHtml += `<tr>
+                <td style="font-weight:600;">${it.name}</td>
+                <td><strong>${it.count}</strong> 次</td>
+                <td>${it.threshold}</td>
+                <td><strong>${it.score}</strong> 分</td>
+                <td><span class="score-tag ${style.class}">${style.text}</span></td>
+                <td>${it.weight}</td>
+                <td style="color:#5b6e8c;">${it.desc}</td>
+            </tr>`;
+        });
+        document.getElementById('statsTableBody').innerHTML = tbodyHtml;
+        document.getElementById('thresholdNote').innerHTML = `<span> 评分标准：</span><span>急加/减速 >2.5m/s²</span><span>急转弯 >2.0m/s²</span><span>超速占比 = 超速时长比例</span><span>满分100，按次数/占比扣分</span>`;
+        // 雷达图渲染
+        if (currentRadarChart) currentRadarChart.dispose();
+        const dom = document.getElementById('radarChart');
+        currentRadarChart = echarts.init(dom);
+        currentRadarChart.setOption({
+            radar: { indicator: [
+                { name:'急加速控制', max:100 },{ name:'急刹车控制', max:100 },{ name:'平稳转弯', max:100 },
+                { name:'速度控制', max:100 },{ name:'疲劳预警', max:100 },{ name:'规则遵守', max:100 }
+            ], shape:'circle', center:['50%','50%'], radius:'62%', name:{ textStyle:{ fontSize:11 } }, splitArea:{ areaStyle:{ color:['rgba(16,185,129,0.05)'] } } },
+            series: [{ type:'radar', data: [{ value: scores.radarScores, areaStyle: { color:'rgba(16,185,129,0.25)' }, lineStyle:{ color:'#10b981', width:2 }, itemStyle:{ color:'#10b981' } }], symbol:'circle', symbolSize:6, label:{ show:true, formatter:(p)=>p.value, fontSize:11 } }],
+            tooltip:{ trigger:'item' }
+        });
+        // 安全建议
+        const suggHtml = suggestions.map(s => `<div class="suggestion-item"><div class="suggestion-icon">${s.icon}</div><div class="suggestion-content"><div class="suggestion-title">${s.title}</div><div class="suggestion-desc">${s.desc}</div></div><span class="suggestion-level level-${s.level}">${s.levelText}</span></div>`).join('');
+        document.getElementById('suggestionsList').innerHTML = suggHtml;
+        showToast(`✅ 分析已更新 | 综合安全分 ${scores.totalScore}`, "success");
+    }
+
+    // 辅助提示
+    function showToast(msg, type='success') {
+        let toastDiv = document.getElementById('toastRoot');
+        let toast = document.createElement('div');
+        toast.className = `toast-message ${type}`;
+        toast.innerText = msg;
+        toastDiv.appendChild(toast);
+        setTimeout(()=>toast.classList.add('show'), 10);
+        setTimeout(()=>{ toast.classList.remove('show'); setTimeout(()=>toast.remove(), 300); }, 2200);
+    }
+
+    // 数据解析 & 上传联动
+    function parseCSV(text) {
+        const lines = text.trim().split(/\r?\n/);
+        const headers = lines[0].split(',').map(h=>h.trim());
+        let records = [];
+        for(let i=1;i<lines.length;i++) {
+            let vals = lines[i].split(',');
+            let obj = {};
+            for(let j=0;j<headers.length;j++) {
+                let v = vals[j] ? vals[j].trim() : '0';
+                obj[headers[j]] = isNaN(parseFloat(v)) ? 0 : parseFloat(v);
+            }
+            records.push(obj);
+        }
+        return records;
+    }
+    function parseJSON(text) {
+        const data = JSON.parse(text);
+        if(Array.isArray(data)) return data;
+        if(data.records && Array.isArray(data.records)) return data.records;
+        if(data.data && Array.isArray(data.data)) return data.data;
+        throw new Error('JSON结构无效');
+    }
+    function handleUploadFile(file) {
+        if(!file) return;
+        const ext = file.name.split('.').pop().toLowerCase();
+        if(ext !== 'csv' && ext !== 'json') { showToast('仅支持 CSV 或 JSON', 'error'); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                let records = ext === 'csv' ? parseCSV(e.target.result) : parseJSON(e.target.result);
+                if(!records.length) throw new Error('无有效数据');
+                renderFullDashboard(records, file.name);
+                // 同步存入sessionStorage
+                sessionStorage.setItem('drivingData', JSON.stringify({ records, fileName: file.name }));
+            } catch(err) { showToast('解析失败: '+err.message, 'error'); }
+        };
+        reader.onerror = () => showToast('读取失败', 'error');
+        reader.readAsText(file, 'UTF-8');
+    }
+
+    // 演示五份合并数据
+    function loadFiveDemoMerged() {
+    // 每次点击加载下一份数据（循环：1->2->3->4->5->1...）
+    const dataset = FIVE_DEMO_DATASETS[demoIndex];
+    const records = dataset.records;
+    renderFullDashboard(records, dataset.name);
+    sessionStorage.setItem('drivingData', JSON.stringify({ records: records, fileName: dataset.name }));
+    
+    // 索引递增，实现5份轮流加载（5份后回到第1份）
+    demoIndex = (demoIndex + 1) % FIVE_DEMO_DATASETS.length;
+}
+
+    // 事件绑定 & 拖拽上传
+    document.getElementById('selectFileBtn').addEventListener('click', ()=> document.getElementById('fileInput').click());
+    document.getElementById('demoFiveBtn').addEventListener('click', ()=> loadFiveDemoMerged());
+    document.getElementById('fileInput').addEventListener('change', (e)=> {
+        if(e.target.files.length) handleUploadFile(e.target.files[0]);
+        e.target.value = '';
+    });
+    // 拖拽区域 (头部卡片支持拖拽)
+    const heroDiv = document.querySelector('.hero-section');
+    heroDiv.addEventListener('dragover', (e) => { e.preventDefault(); heroDiv.style.opacity = '0.95'; });
+    heroDiv.addEventListener('dragleave', () => { heroDiv.style.opacity = '1'; });
+    heroDiv.addEventListener('drop', (e) => {
+        e.preventDefault();
+        heroDiv.style.opacity = '1';
+        const files = e.dataTransfer.files;
+        if(files.length) handleUploadFile(files[0]);
+    });
+    // 初始加载演示数据（5份合并）
+    loadFiveDemoMerged();
+</script>
+</body>
+</html>
