@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>历史数据 - 驾驶安全评价系统</title>
+    <title>历史数据</title>
     <!-- ECharts CDN -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
@@ -64,7 +64,7 @@
             padding: 16px 24px;
             margin-bottom: 28px;
             display: flex;
- align-items: center;
+            align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 16px;
@@ -208,18 +208,18 @@
 
         /* 异常标红 */
         .danger-value {
-    color: #dc2626;
-    font-weight: 700;
-}
+            color: #dc2626;
+            font-weight: 700;
+        }
 
-.warning-value {
-    color: #f97316;
-    font-weight: 600;
-}
+        .warning-value {
+            color: #f97316;
+            font-weight: 600;
+        }
 
-.normal-value {
-    color: #10b981;
-}
+        .normal-value {
+            color: #10b981;
+        }
 
         /* 历史驾驶建议 */
         .history-suggestions {
@@ -381,8 +381,8 @@
                             <th>急转弯<br><span style="font-weight:normal;">(次)</span></th>
                             <th>超速占比<br><span style="font-weight:normal;">(%)</span></th>
                             <th>疲劳驾驶<br><span style="font-weight:normal;">(次)</span></th>
-                            <th>违章<br><span style="font-weight:normal;">(次)</span></th>
-                            <th>安全分</th>
+                            
+                            
                         </tr>
                     </thead>
                     <tbody id="summaryTableBody">
@@ -424,53 +424,127 @@
     </div>
 
     <script>
-        // ==================== 模拟历史数据（最近30天） ====================
+        // ==================== 标准型驾驶风格的历史数据（最近30天） ====================
+        // 安全阈值：急加速>8次，急刹车>6次，急转弯>8次，超速>10%
+        // 标准型驾驶员：各项指标多在安全范围内，偶尔有轻微超标
+        
         function generateHistoryData(days = 30) {
-            const data = [];
-            const startDate = new Date();
-            startDate.setDate(startDate.getDate() - days);
-            
-            for (let i = 0; i < days; i++) {
-                const currentDate = new Date(startDate);
-                currentDate.setDate(startDate.getDate() + i);
-                const dateStr = currentDate.toISOString().slice(0, 10);
-                
-                // 模拟有一定规律的数据：周末和某些天数据较差
-                const dayOfWeek = currentDate.getDay();
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const randomFactor = isWeekend ? 1.5 : 0.8;
-                
-                // 安全阈值：急加速>8次，急刹车>6次，急转弯>8次，超速>10%
-                const harshAccel = Math.floor(Math.random() * 15 * randomFactor) + (isWeekend ? 3 : 1);
-                const harshDecel = Math.floor(Math.random() * 12 * randomFactor) + (isWeekend ? 2 : 1);
-                const harshTurn = Math.floor(Math.random() * 12 * randomFactor) + (isWeekend ? 2 : 1);
-                const speedRatio = Math.floor(Math.random() * 20 * randomFactor) + (isWeekend ? 2 : 0);
-                const fatigueRisk = Math.random() > 0.85 ? 1 : 0;
-                const violation = Math.random() > 0.9 ? 1 : 0;
-                
-                // 计算安全分
-                let score = 100;
-                score -= Math.min(60, harshAccel * 4);
-                score -= Math.min(70, harshDecel * 5);
-                score -= Math.min(50, harshTurn * 3);
-                score -= Math.min(30, speedRatio);
-                score -= fatigueRisk * 10;
-                score -= violation * 15;
-                score = Math.max(0, Math.min(100, Math.round(score)));
-                
-                data.push({
-                    date: dateStr,
-                    harshAccel: harshAccel,
-                    harshDecel: harshDecel,
-                    harshTurn: harshTurn,
-                    speedRatio: speedRatio,
-                    fatigueRisk: fatigueRisk,
-                    violation: violation,
-                    safetyScore: score
-                });
+    const data = [];
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    // 自然驾驶风格参数
+    let drivingState = 'normal'; // normal, bad, good
+    let badDaysCount = 0;
+    let goodDaysCount = 0;
+    
+    for (let i = 0; i < days; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        const dateStr = currentDate.toISOString().slice(0, 10);
+        
+        // 周末效应
+        const dayOfWeek = currentDate.getDay();
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        
+        // 驾驶状态的自然演变（连续好几天后容易出现坏日子，坏日子后容易变好）
+        if (drivingState === 'bad') {
+            badDaysCount++;
+            if (badDaysCount >= 2 || Math.random() < 0.4) {
+                drivingState = 'normal';
+                badDaysCount = 0;
             }
-            return data;
+        } else if (drivingState === 'good') {
+            goodDaysCount++;
+            if (goodDaysCount >= 3 || Math.random() < 0.3) {
+                drivingState = 'normal';
+                goodDaysCount = 0;
+            }
+        } else {
+            if (Math.random() < 0.15) {
+                drivingState = 'bad';
+                badDaysCount = 1;
+            } else if (Math.random() < 0.1) {
+                drivingState = 'good';
+                goodDaysCount = 1;
+            }
         }
+        
+        // 周末更容易出现坏日子
+        if (isWeekend && drivingState !== 'bad' && Math.random() < 0.25) {
+            drivingState = 'bad';
+        }
+        
+        // 根据状态生成数据（自然分布）
+        let harshAccel, harshDecel, harshTurn, speedRatio;
+        
+        if (drivingState === 'bad') {
+            // 坏日子：数据偏高，但不同指标有差异
+            harshAccel = Math.floor(6 + Math.random() * 6);  // 6-11
+            harshDecel = Math.floor(5 + Math.random() * 5);  // 5-9
+            harshTurn = Math.floor(6 + Math.random() * 5);   // 6-10
+            speedRatio = Math.floor(9 + Math.random() * 6);   // 9-14
+        } else if (drivingState === 'good') {
+            // 好日子：数据偏低
+            harshAccel = Math.floor(1 + Math.random() * 3);   // 1-3
+            harshDecel = Math.floor(0 + Math.random() * 2);   // 0-1
+            harshTurn = Math.floor(1 + Math.random() * 3);    // 1-3
+            speedRatio = Math.floor(2 + Math.random() * 4);   // 2-5
+        } else {
+            // 正常日子：中等水平，有一定波动
+            harshAccel = Math.floor(3 + Math.random() * 5);   // 3-7
+            harshDecel = Math.floor(2 + Math.random() * 4);   // 2-5
+            harshTurn = Math.floor(3 + Math.random() * 4);    // 3-6
+            speedRatio = Math.floor(4 + Math.random() * 5);   // 4-8
+        }
+        
+        // 周末额外增加一点（但不过分）
+        if (isWeekend && drivingState === 'normal') {
+            harshAccel = Math.min(9, harshAccel + Math.floor(Math.random() * 3));
+            harshDecel = Math.min(7, harshDecel + Math.floor(Math.random() * 2));
+            harshTurn = Math.min(9, harshTurn + Math.floor(Math.random() * 2));
+            speedRatio = Math.min(11, speedRatio + Math.floor(Math.random() * 3));
+        }
+        
+        // 疲劳驾驶：连续驾驶后概率增加（模拟自然疲劳）
+        let fatigueRisk = 0;
+        if (drivingState === 'bad' && Math.random() < 0.3) {
+            fatigueRisk = 1;
+        } else if (drivingState === 'normal' && Math.random() < 0.08) {
+            fatigueRisk = 1;
+        }
+        
+        // 违章：坏日子概率增加
+        let violation = 0;
+        if (drivingState === 'bad' && Math.random() < 0.25) {
+            violation = 1;
+        } else if (Math.random() < 0.03) {
+            violation = 1;
+        }
+        
+        // 计算安全分
+        let score = 100;
+        score -= harshAccel * 8;
+        score -= harshDecel * 8;
+        score -= harshTurn * 6;
+        score -= speedRatio * 2;
+        score -= fatigueRisk * 15;
+        score -= violation * 15;
+        score = Math.max(0, Math.min(100, Math.round(score)));
+        
+        data.push({
+            date: dateStr,
+            harshAccel: harshAccel,
+            harshDecel: harshDecel,
+            harshTurn: harshTurn,
+            speedRatio: speedRatio,
+            fatigueRisk: fatigueRisk,
+            violation: violation,
+            safetyScore: score
+        });
+    }
+    return data;
+}
 
         // 安全阈值定义
         const THRESHOLDS = {
@@ -497,7 +571,7 @@
             return `<span class="${style}">${value}</span>`;
         }
 
-        // 生成模拟历史数据
+        // 生成标准型驾驶风格数据
         let historyData = generateHistoryData(30);
 
         // ==================== 渲染趋势图 ====================
@@ -598,8 +672,8 @@
                         <td>${getValueHtml(d.harshTurn, 'harshTurn')}</td>
                         <td>${getValueHtml(d.speedRatio, 'speedRatio')}</td>
                         <td>${d.fatigueRisk === 1 ? '<span class="danger-value">⚠️ 是</span>' : '否'}</td>
-                        <td>${d.violation === 1 ? '<span class="danger-value">⚠️ 有</span>' : '无'}</td>
-                        <td><strong>${d.safetyScore}</strong> 分</td>
+                        
+                        
                     </tr>
                 `;
             }
@@ -666,7 +740,7 @@
             const avgSpeed = filteredData.reduce((s, d) => s + d.speedRatio, 0) / filteredData.length;
             const avgScore = filteredData.reduce((s, d) => s + d.safetyScore, 0) / filteredData.length;
             const fatigueDays = filteredData.filter(d => d.fatigueRisk === 1).length;
-            const violationDays = filteredData.filter(d => d.violation === 1).length;
+           
             
             const daysCount = filteredData.length;
             const accelPerDay = (totalAccel / daysCount).toFixed(1);
@@ -674,47 +748,61 @@
             
             const suggestions = [];
             
-            // 综合评估
+            // 综合评估（标准型驾驶：70-85分）
             if (avgScore >= 80) {
                 suggestions.push({
                     icon: '🏆',
-                    title: '综合表现优秀',
-                    desc: `在统计周期内，您的平均安全得分为${avgScore.toFixed(0)}分，驾驶行为整体表现优秀。`,
-                    meta: `超出平均线，继续保持`
+                    title: '驾驶表现优秀',
+                    desc: `在统计周期内，您的平均安全得分为${avgScore.toFixed(0)}分，驾驶行为整体表现优秀，偶尔有轻微波动。`,
+                    meta: `继续保持良好习惯`
                 });
             } else if (avgScore >= 60) {
                 suggestions.push({
                     icon: '📊',
-                    title: '综合表现良好，有提升空间',
-                    desc: `在统计周期内，您的平均安全得分为${avgScore.toFixed(0)}分，部分指标需要关注和改进。`,
-                    meta: `平均分${avgScore.toFixed(0)}分，安全驾驶习惯待加强`
+                    title: '驾驶表现良好',
+                    desc: `在统计周期内，您的平均安全得分为${avgScore.toFixed(0)}分，大部分指标在安全范围内，部分细节有提升空间。`,
+                    meta: `瞄准80分目标，持续改进`
                 });
             } else {
                 suggestions.push({
                     icon: '⚠️',
-                    title: '综合表现待改进',
-                    desc: `在统计周期内，您的平均安全得分为${avgScore.toFixed(0)}分，存在较多不安全驾驶行为，建议重点关注。`,
-                    meta: `多项指标超过安全阈值，急需改善`
+                    title: '驾驶表现待改进',
+                    desc: `在统计周期内，您的平均安全得分为${avgScore.toFixed(0)}分，建议重点关注驾驶行为改善。`,
+                    meta: `多项指标超过安全阈值`
                 });
             }
             
-            // 急加速分析
-            if (totalAccel > daysCount * 5) {
+            // 急加速分析（标准型：日均3-5次）
+            if (totalAccel > daysCount * 6) {
                 suggestions.push({
                     icon: '🚀',
-                    title: '急加速频率偏高',
-                    desc: `统计周期内共发生${totalAccel}次急加速，平均每天${accelPerDay}次。急加速会增加油耗和事故风险。`,
-                    meta: `建议：平稳起步，避免猛踩油门`
+                    title: '急加速频率略高',
+                    desc: `统计周期内共发生${totalAccel}次急加速，平均每天${accelPerDay}次。建议平稳起步，减少急加速。`,
+                    meta: `建议：缓踩油门，循序渐进加速`
+                });
+            } else if (totalAccel > daysCount * 4) {
+                suggestions.push({
+                    icon: '🚀',
+                    title: '急加速控制良好',
+                    desc: `统计周期内急加速共${totalAccel}次，平均每天${accelPerDay}次，处于正常范围。`,
+                    meta: `继续保持平稳加速习惯`
                 });
             }
             
             // 急刹车分析
-            if (totalDecel > daysCount * 4) {
+            if (totalDecel > daysCount * 5) {
                 suggestions.push({
                     icon: '🛑',
-                    title: '急刹车次数较多',
-                    desc: `统计周期内共发生${totalDecel}次急刹车，平均每天${decelPerDay}次。急刹车往往意味着跟车过近或注意力不集中。`,
-                    meta: `建议：保持安全车距，提前预判路况`
+                    title: '急刹车次数略多',
+                    desc: `统计周期内共发生${totalDecel}次急刹车，平均每天${decelPerDay}次。建议保持安全车距，提前预判路况。`,
+                    meta: `建议：拉大跟车距离`
+                });
+            } else if (totalDecel > daysCount * 3) {
+                suggestions.push({
+                    icon: '🛑',
+                    title: '刹车习惯较平稳',
+                    desc: `统计周期内急刹车共${totalDecel}次，平均每天${decelPerDay}次，刹车控制较为平稳。`,
+                    meta: `继续保持预判性驾驶`
                 });
             }
             
@@ -722,9 +810,23 @@
             if (avgSpeed > 8) {
                 suggestions.push({
                     icon: '📈',
-                    title: '超速行为需警惕',
-                    desc: `统计周期内平均超速占比${avgSpeed.toFixed(1)}%，超速是交通事故的主要诱因之一。`,
-                    meta: `建议：严格遵守限速规定`
+                    title: '超速行为需关注',
+                    desc: `统计周期内平均超速占比${avgSpeed.toFixed(1)}%，建议更严格遵守限速规定。`,
+                    meta: `建议：开启定速巡航或限速提醒`
+                });
+            } else if (avgSpeed > 5) {
+                suggestions.push({
+                    icon: '📈',
+                    title: '车速控制基本合理',
+                    desc: `统计周期内平均超速占比${avgSpeed.toFixed(1)}%，车速控制处于合理范围。`,
+                    meta: `偶尔留意限速标志即可`
+                });
+            } else {
+                suggestions.push({
+                    icon: '✅',
+                    title: '车速控制优秀',
+                    desc: `统计周期内平均超速占比仅${avgSpeed.toFixed(1)}%，严格遵守限速规定。`,
+                    meta: `非常优秀的驾驶习惯`
                 });
             }
             
@@ -733,37 +835,27 @@
                 suggestions.push({
                     icon: '😴',
                     title: '疲劳驾驶提醒',
-                    desc: `统计周期内检测到${fatigueDays}天存在疲劳驾驶风险，疲劳驾驶会严重影响反应能力。`,
-                    meta: `建议：保证充足休息，避免长时间连续驾驶`
-                });
-            }
-            
-            // 违章分析
-            if (violationDays > 0) {
-                suggestions.push({
-                    icon: '📋',
-                    title: '交通违章记录',
-                    desc: `统计周期内共有${violationDays}天存在违章记录，违章行为会增加事故风险和法律成本。`,
-                    meta: `建议：遵守交通规则，安全文明驾驶`
-                });
-            }
-            
-            // 整体改进建议
-            if (suggestions.length <= 2) {
-                suggestions.push({
-                    icon: '✅',
-                    title: '继续保持良好习惯',
-                    desc: '您的驾驶行为整体表现良好，各项指标均在正常范围内。请继续保持安全驾驶习惯。',
-                    meta: '安全驾驶，平安出行'
+                    desc: `统计周期内检测到${fatigueDays}天存在疲劳驾驶风险，请保证充足休息，避免长时间连续驾驶。`,
+                    meta: `建议：每2小时休息15分钟`
                 });
             } else {
                 suggestions.push({
-                    icon: '🎯',
-                    title: '整体改进方向',
-                    desc: '建议您重点关注急加速和急刹车的控制，同时注意车速管理和疲劳驾驶预防。定期查看驾驶报告，持续改进。',
-                    meta: '坚持21天养成良好驾驶习惯'
+                    icon: '✅',
+                    title: '无疲劳驾驶记录',
+                    desc: `统计周期内未检测到疲劳驾驶，请继续保持良好的休息习惯。`,
+                    meta: `精力充沛，安全有保障`
                 });
             }
+            
+            
+            
+            // 整体总结
+            suggestions.push({
+                icon: '🎯',
+                title: '整体驾驶风格评估',
+                desc: `您的驾驶风格属于"标准型"，整体表现良好。建议重点关注${totalAccel > daysCount * 5 ? '急加速、' : ''}${totalDecel > daysCount * 4 ? '急刹车、' : ''}${avgSpeed > 7 ? '超速控制' : '现有良好习惯的保持'}。`,
+                meta: `持续关注驾驶数据，安全出行`
+            });
             
             const html = suggestions.map(s => `
                 <div class="suggestion-card">
@@ -783,7 +875,6 @@
         function refreshAll() {
             const dateRange = document.getElementById('dateRange').value;
             
-            
             renderCharts(historyData, dateRange);
             renderSummaryTable(historyData, dateRange);
             renderSummaryStats(historyData, dateRange);
@@ -792,6 +883,7 @@
 
         // 监听筛选变化
         document.getElementById('dateRange').addEventListener('change', refreshAll);
+        
         // 初始化
         refreshAll();
     </script>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>智驾分析中心 | 驾驶安全评价系统</title>
+    <title>驾驶数据分析</title>
     <!-- ECharts CDN -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
@@ -315,7 +315,7 @@
             </div>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 6px;">
-            <div style="font-size: 13px; color: rgba(255,255,255,0.8);">支持 CSV / JSON 格式，拖拽或点击上传，自动更新分析结果</div>
+            <div style="font-size: 13px; color: rgba(255,255,255,0.8);">支持 CSV / JSON 格式，点击上传，自动更新分析结果</div>
             
         </div>
         <input type="file" id="fileInput" accept=".csv,.json" style="display: none;">
@@ -332,7 +332,7 @@
         </div>
         <div class="stats-table-wrapper">
             <table class="stats-table" id="statsTable">
-                <thead><tr><th>驾驶行为</th><th>检测次数</th><th>判定阈值</th><th>单项得分</th><th>评级</th><th>扣分规则</th><th>说明</th></tr></thead>
+                <thead><tr><th>驾驶行为</th><th>检测次数</th><th>判定阈值</th><th>单项得分</th><th>评级</th><th>说明</th></tr></thead>
                 <tbody id="statsTableBody"></tbody>
             </table>
         </div>
@@ -361,58 +361,64 @@
 
 <script>
     // ---------- 1. 五份独立演示数据（可直接演示）----------
-    const FIVE_DEMO_DATASETS = [
-        { name: "温和通勤型", records: [
-            { acceleration: 1.2, deceleration: 1.1, lateralAccel: 0.6, speedRatio: 2, fatigueRisk: 0, violation: 0 },
-            { acceleration: 1.5, deceleration: 1.3, lateralAccel: 0.9, speedRatio: 3, fatigueRisk: 0, violation: 0 },
-            { acceleration: 1.0, deceleration: 1.4, lateralAccel: 0.7, speedRatio: 1, fatigueRisk: 0, violation: 0 },
-            { acceleration: 1.8, deceleration: 1.9, lateralAccel: 1.0, speedRatio: 4, fatigueRisk: 0, violation: 0 },
-            { acceleration: 2.0, deceleration: 2.0, lateralAccel: 1.1, speedRatio: 2, fatigueRisk: 0, violation: 0 }
-        ]},
-        { name: "偶尔激进型", records: [
-            { acceleration: 3.0, deceleration: 2.9, lateralAccel: 2.1, speedRatio: 12, fatigueRisk: 0, violation: 0 },
-            { acceleration: 2.4, deceleration: 3.3, lateralAccel: 1.9, speedRatio: 8, fatigueRisk: 0, violation: 1 },
-            { acceleration: 1.9, deceleration: 2.2, lateralAccel: 1.5, speedRatio: 5, fatigueRisk: 0, violation: 0 },
-            { acceleration: 3.4, deceleration: 2.7, lateralAccel: 2.3, speedRatio: 14, fatigueRisk: 0, violation: 0 },
-            { acceleration: 2.2, deceleration: 2.5, lateralAccel: 1.7, speedRatio: 9, fatigueRisk: 0, violation: 0 }
-        ]},
-        { name: "高风险高频次", records: [
-            { acceleration: 4.1, deceleration: 4.3, lateralAccel: 2.9, speedRatio: 22, fatigueRisk: 1, violation: 2 },
-            { acceleration: 3.7, deceleration: 3.9, lateralAccel: 2.5, speedRatio: 18, fatigueRisk: 0, violation: 1 },
-            { acceleration: 3.2, deceleration: 3.5, lateralAccel: 2.2, speedRatio: 20, fatigueRisk: 1, violation: 0 },
-            { acceleration: 4.0, deceleration: 3.8, lateralAccel: 2.8, speedRatio: 25, fatigueRisk: 1, violation: 1 },
-            { acceleration: 3.5, deceleration: 3.2, lateralAccel: 2.3, speedRatio: 19, fatigueRisk: 0, violation: 2 }
-        ]},
-        { name: "疲劳驾驶倾向", records: [
-            { acceleration: 2.1, deceleration: 2.4, lateralAccel: 1.3, speedRatio: 7, fatigueRisk: 1, violation: 0 },
-            { acceleration: 2.3, deceleration: 2.9, lateralAccel: 1.8, speedRatio: 9, fatigueRisk: 1, violation: 0 },
-            { acceleration: 1.9, deceleration: 2.1, lateralAccel: 1.2, speedRatio: 5, fatigueRisk: 1, violation: 0 },
-            { acceleration: 2.7, deceleration: 2.6, lateralAccel: 1.7, speedRatio: 8, fatigueRisk: 1, violation: 0 },
-            { acceleration: 2.0, deceleration: 2.3, lateralAccel: 1.4, speedRatio: 6, fatigueRisk: 1, violation: 0 }
-        ]},
-        { name: "违章&超速突出", records: [
-            { acceleration: 2.5, deceleration: 2.4, lateralAccel: 1.5, speedRatio: 16, fatigueRisk: 0, violation: 3 },
-            { acceleration: 2.8, deceleration: 2.9, lateralAccel: 1.9, speedRatio: 18, fatigueRisk: 0, violation: 2 },
-            { acceleration: 2.2, deceleration: 2.5, lateralAccel: 1.4, speedRatio: 15, fatigueRisk: 0, violation: 1 },
-            { acceleration: 3.0, deceleration: 2.7, lateralAccel: 1.8, speedRatio: 20, fatigueRisk: 0, violation: 2 },
-            { acceleration: 2.6, deceleration: 2.8, lateralAccel: 1.6, speedRatio: 14, fatigueRisk: 0, violation: 4 }
-        ]}
-    ];
-    let demoIndex = 0;  // 用于记录当前是第几次点击
-    // 合并五份演示数据为一个完整记录集 (供演示按钮使用，展示更多样本)
-    function getMergedDemoRecords() {
-        let merged = [];
-        for (let ds of FIVE_DEMO_DATASETS) {
-            merged.push(...ds.records);
-        }
-        return merged;
+
+    const THREE_DEMO_DATASETS = [
+    { 
+        name: "冷静型驾驶员", 
+        styleTag: "平稳舒适 · 预判充分",
+        records: [
+            { acceleration: 1.2, deceleration: 1.1, lateralAccel: 0.6, speedRatio: 2, fatigueRisk: 0 },
+            { acceleration: 1.4, deceleration: 1.3, lateralAccel: 0.8, speedRatio: 3, fatigueRisk: 0 },
+            { acceleration: 1.0, deceleration: 1.2, lateralAccel: 0.5, speedRatio: 2, fatigueRisk: 0 },
+            { acceleration: 1.5, deceleration: 1.4, lateralAccel: 0.7, speedRatio: 3, fatigueRisk: 0 },
+            { acceleration: 1.3, deceleration: 1.2, lateralAccel: 0.6, speedRatio: 2, fatigueRisk: 0 },
+            { acceleration: 1.1, deceleration: 1.0, lateralAccel: 0.5, speedRatio: 1, fatigueRisk: 0 },
+            { acceleration: 1.6, deceleration: 1.5, lateralAccel: 0.8, speedRatio: 3, fatigueRisk: 0 },
+            { acceleration: 1.2, deceleration: 1.1, lateralAccel: 0.6, speedRatio: 2, fatigueRisk: 0 }
+        ]
+    },
+    { 
+        name: "普通型驾驶员", 
+        styleTag: "标准控制 · 偶有起伏",
+        records: [
+            { acceleration: 2.4, deceleration: 2.5, lateralAccel: 1.5, speedRatio: 10, fatigueRisk: 1 },
+            { acceleration: 2.8, deceleration: 2.9, lateralAccel: 1.8, speedRatio: 12, fatigueRisk: 0 },
+            { acceleration: 2.2, deceleration: 2.3, lateralAccel: 1.4, speedRatio: 9, fatigueRisk: 0 },
+            { acceleration: 3.0, deceleration: 2.8, lateralAccel: 1.9, speedRatio: 14, fatigueRisk: 0 },
+            { acceleration: 2.6, deceleration: 2.7, lateralAccel: 1.6, speedRatio: 11, fatigueRisk: 0 },
+            { acceleration: 2.3, deceleration: 2.4, lateralAccel: 1.5, speedRatio: 10, fatigueRisk: 0 },
+            { acceleration: 2.9, deceleration: 3.0, lateralAccel: 1.8, speedRatio: 13, fatigueRisk: 0 },
+            { acceleration: 2.5, deceleration: 2.6, lateralAccel: 1.7, speedRatio: 11, fatigueRisk: 0 }
+        ]
+    },
+    { 
+        name: "激进型驾驶员", 
+        styleTag: "高风险 · 急需改进",
+        records: [
+            { acceleration: 4.2, deceleration: 4.3, lateralAccel: 3.0, speedRatio: 28, fatigueRisk: 2 },
+            { acceleration: 3.9, deceleration: 4.1, lateralAccel: 2.8, speedRatio: 25, fatigueRisk: 1 },
+            { acceleration: 4.5, deceleration: 4.4, lateralAccel: 3.2, speedRatio: 30, fatigueRisk: 2 },
+            { acceleration: 3.7, deceleration: 3.9, lateralAccel: 2.6, speedRatio: 24, fatigueRisk: 1 },
+            { acceleration: 4.0, deceleration: 4.2, lateralAccel: 2.9, speedRatio: 27, fatigueRisk: 1 },
+            { acceleration: 4.3, deceleration: 4.5, lateralAccel: 3.1, speedRatio: 29, fatigueRisk: 2 },
+            { acceleration: 3.8, deceleration: 4.0, lateralAccel: 2.7, speedRatio: 26, fatigueRisk: 1 },
+            { acceleration: 4.4, deceleration: 4.3, lateralAccel: 3.0, speedRatio: 28, fatigueRisk: 2 }
+        ]
     }
+];
+let demoIndex = 0;
+
+function loadDemoData() {
+    const dataset = THREE_DEMO_DATASETS[demoIndex];
+    renderFullDashboard(dataset.records, dataset.name);
+    demoIndex = (demoIndex + 1) % THREE_DEMO_DATASETS.length;
+}
 
     // ---------- 2. 数据分析核心 (与之前逻辑一致，但完整保留评分机制) ----------
     function calculateScores(records) {
         if (!records || records.length === 0) {
             return {
-                radarScores: [0,0,0,0,0,0], rawData: { harshAccel:0, harshDecel:0, harshTurn:0, speedRatio:0, fatigueEvents:0, violations:0 },
+                radarScores: [0,0,0,0,0], rawData: { harshAccel:0, harshDecel:0, harshTurn:0, speedRatio:0, fatigueEvents:0 },
                 totalScore:0, recordCount:0, avgAccel:0, avgDecel:0, avgLateral:0, maxAccel:0, maxDecel:0
             };
         }
@@ -425,7 +431,7 @@
             if (r.lateralAccel > 2.0) turnCount++;
             if (r.speedRatio) totalSpeedRatio += r.speedRatio;
             if (r.fatigueRisk === 1 || r.fatigueRisk === true) fatigueCount++;
-            if (r.violation && r.violation > 0) violationCount += r.violation;
+            
             totalAccel += r.acceleration || 0;
             totalDecel += r.deceleration || 0;
             totalLateral += r.lateralAccel || 0;
@@ -434,14 +440,13 @@
         }
         const n = records.length;
         const avgSpeedRatio = n>0 ? Math.min(35, Math.round(totalSpeedRatio / n)) : 0;
-        const accelScore = Math.max(0, 100 - Math.min(60, accelCount * 4));
-        const decelScore = Math.max(0, 100 - Math.min(70, decelCount * 5));
-        const turnScore = Math.max(0, 100 - Math.min(50, turnCount * 3));
-        const speedScore = Math.max(0, 100 - avgSpeedRatio);
-        const fatigueScore = Math.max(0, 100 - Math.min(50, fatigueCount * 10));
-        const violationScore = Math.max(0, 100 - Math.min(80, violationCount * 15));
-        const radarScores = [accelScore, decelScore, turnScore, speedScore, fatigueScore, violationScore];
-        const totalScore = Math.round(radarScores.reduce((a,b)=>a+b,0)/6);
+        const accelScore = Math.max(0, 100 - Math.min(80, accelCount * 8));      // 每次急加速扣8分
+const decelScore = Math.max(0, 100 - Math.min(80, decelCount * 8));      // 每次急刹车扣8分
+const turnScore = Math.max(0, 100 - Math.min(70, turnCount * 6));        // 每次急转弯扣6分
+const speedScore = Math.max(0, 100 - Math.min(50, avgSpeedRatio * 2));   // 超速占比1%扣2分
+const fatigueScore = Math.max(0, 100 - Math.min(60, fatigueCount * 15)); // 每次疲劳扣15分
+        const radarScores = [accelScore, decelScore, turnScore, speedScore, fatigueScore];
+const totalScore = Math.round(radarScores.reduce((a,b)=>a+b,0)/5);
         return {
             radarScores, rawData: { harshAccel: accelCount, harshDecel: decelCount, harshTurn: turnCount, speedRatio: avgSpeedRatio, fatigueEvents: fatigueCount, violations: violationCount },
             totalScore, recordCount: n, avgAccel: (totalAccel/n).toFixed(2), avgDecel: (totalDecel/n).toFixed(2), avgLateral: (totalLateral/n).toFixed(2), maxAccel: maxAccel.toFixed(2), maxDecel: maxDecel.toFixed(2)
@@ -477,37 +482,35 @@
         }
         const scores = calculateScores(records);
         const raw = scores.rawData;
-        const drivingStyle = scores.totalScore >= 80 ? { text: "安全型驾驶", color: "#10b981" } : (scores.totalScore >= 60 ? { text: "标准型驾驶", color: "#f97316" } : { text: "激进型驾驶", color: "#ef4444" });
+        const drivingStyle = scores.totalScore >= 80 ? { text: "冷静型驾驶", color: "#10b981" } : (scores.totalScore >= 60 ? { text: "标准型驾驶", color: "#f97316" } : { text: "激进型驾驶", color: "#ef4444" });
         const suggestions = generateSuggestions(scores, raw);
         // 更新顶部状态
-        document.getElementById('dataStatusBadge').innerHTML = `📊 当前演示数据: ${sourceLabel} (${scores.recordCount}条)`;
+        document.getElementById('dataStatusBadge').innerHTML = `📊 当前演示数据: ${sourceLabel} `;
         // 概览卡片
         document.getElementById('overviewGrid').innerHTML = `
-            <div class="overview-card"><div class="overview-icon icon-bg-blue">📁</div><div class="overview-label">数据来源</div><div class="overview-value">${sourceLabel}</div><div class="overview-sub">${scores.recordCount} 条记录</div></div>
-            <div class="overview-card"><div class="overview-icon icon-bg-green">🏆</div><div class="overview-label">综合安全分</div><div class="overview-value">${scores.totalScore}<span class="overview-unit">/100</span></div><div class="overview-sub" style="color:${drivingStyle.color}">${drivingStyle.text}</div></div>
-            <div class="overview-card"><div class="overview-icon icon-bg-orange">📅</div><div class="overview-label">分析时间</div><div class="overview-value" style="font-size: 18px;">${new Date().toLocaleDateString()}</div><div class="overview-sub">实时更新</div></div>
-            <div class="overview-card"><div class="overview-icon icon-bg-purple">📏</div><div class="overview-label">平均加/减速度</div><div class="overview-value" style="font-size: 22px;">${scores.avgAccel} / ${scores.avgDecel}</div><div class="overview-sub">m/s² · 峰值 ${scores.maxAccel}/${scores.maxDecel}</div></div>
-        `;
+    <div class="overview-card"><div class="overview-icon icon-bg-blue">📁</div><div class="overview-label">数据来源</div><div class="overview-value">${sourceLabel}</div></div>
+    <div class="overview-card"><div class="overview-icon icon-bg-green">🏆</div><div class="overview-label">综合安全分</div><div class="overview-value">${scores.totalScore}<span class="overview-unit">/100</span></div><div class="overview-sub" style="color:${drivingStyle.color}">${drivingStyle.text}</div></div>
+    <div class="overview-card"><div class="overview-icon icon-bg-orange">📅</div><div class="overview-label">分析时间</div><div class="overview-value" style="font-size: 18px;">${new Date().toLocaleDateString()}</div><div class="overview-sub">实时更新</div></div>
+`;
         // 表格动态渲染
         const items = [
-            { name:' 急加速', key:'harshAccel', count:raw.harshAccel, threshold:'>2.5 m/s²', score:scores.radarScores[0], weight:'每次扣4分', desc:'起步过猛' },
-            { name:' 急刹车', key:'harshDecel', count:raw.harshDecel, threshold:'>2.5 m/s²', score:scores.radarScores[1], weight:'每次扣5分', desc:'紧急制动' },
-            { name:' 急转弯', key:'harshTurn', count:raw.harshTurn, threshold:'>2.0 m/s²', score:scores.radarScores[2], weight:'每次扣3分', desc:'转弯过快' },
-            { name:' 超速占比', key:'speedRatio', count:raw.speedRatio+'%', threshold:'限速以上', score:scores.radarScores[3], weight:'1%扣1分', desc:'超速行驶' },
-            { name:' 疲劳驾驶', key:'fatigueEvents', count:raw.fatigueEvents, threshold:'连续驾驶>4h', score:scores.radarScores[4], weight:'每次扣10分', desc:'注意力下降' },
-            { name:' 规则遵守', key:'violations', count:raw.violations, threshold:'交通违章', score:scores.radarScores[5], weight:'每次扣15分', desc:'违章记录' }
+            { name:' 急加速', key:'harshAccel', count:raw.harshAccel, threshold:'>2.5 m/s²', score:scores.radarScores[0], weight:'每次扣8分', desc:'起步过猛' },
+            { name:' 急刹车', key:'harshDecel', count:raw.harshDecel, threshold:'>2.5 m/s²', score:scores.radarScores[1], weight:'每次扣8分', desc:'紧急制动' },
+            { name:' 急转弯', key:'harshTurn', count:raw.harshTurn, threshold:'>2.0 m/s²', score:scores.radarScores[2], weight:'每次扣6分', desc:'转弯过快' },
+            { name:' 超速占比', key:'speedRatio', count:raw.speedRatio+'%', threshold:'限速以上', score:scores.radarScores[3], weight:'1%扣2分', desc:'超速行驶' },
+            { name:' 疲劳驾驶', key:'fatigueEvents', count:raw.fatigueEvents, threshold:'连续驾驶>4h', score:scores.radarScores[4], weight:'每次扣15分', desc:'注意力下降' },
+           
         ];
         let tbodyHtml = '';
         items.forEach((it, idx) => {
             const style = getScoreStyle(it.score);
             tbodyHtml += `<tr>
                 <td style="font-weight:600;">${it.name}</td>
-                <td><strong>${it.count}</strong> 次</td>
-                <td>${it.threshold}</td>
-                <td><strong>${it.score}</strong> 分</td>
-                <td><span class="score-tag ${style.class}">${style.text}</span></td>
-                <td>${it.weight}</td>
-                <td style="color:#5b6e8c;">${it.desc}</td>
+<td><strong>${it.count}</strong> 次</td>
+<td>${it.threshold}</td>
+<td><strong>${it.score}</strong> 分</td>
+<td><span class="score-tag ${style.class}">${style.text}</span></td>
+<td style="color:#5b6e8c;">${it.desc}</td>
             </tr>`;
         });
         document.getElementById('statsTableBody').innerHTML = tbodyHtml;
@@ -518,9 +521,9 @@
         currentRadarChart = echarts.init(dom);
         currentRadarChart.setOption({
             radar: { indicator: [
-                { name:'急加速控制', max:100 },{ name:'急刹车控制', max:100 },{ name:'平稳转弯', max:100 },
-                { name:'速度控制', max:100 },{ name:'疲劳预警', max:100 },{ name:'规则遵守', max:100 }
-            ], shape:'circle', center:['50%','50%'], radius:'62%', name:{ textStyle:{ fontSize:11 } }, splitArea:{ areaStyle:{ color:['rgba(16,185,129,0.05)'] } } },
+    { name:'急加速控制', max:100 },{ name:'急刹车控制', max:100 },{ name:'平稳转弯', max:100 },
+    { name:'速度控制', max:100 },{ name:'疲劳预警', max:100 }
+], shape:'circle', center:['50%','50%'], radius:'62%', name:{ textStyle:{ fontSize:11 } }, splitArea:{ areaStyle:{ color:['rgba(16,185,129,0.05)'] } } },
             series: [{ type:'radar', data: [{ value: scores.radarScores, areaStyle: { color:'rgba(16,185,129,0.25)' }, lineStyle:{ color:'#10b981', width:2 }, itemStyle:{ color:'#10b981' } }], symbol:'circle', symbolSize:6, label:{ show:true, formatter:(p)=>p.value, fontSize:11 } }],
             tooltip:{ trigger:'item' }
         });
@@ -596,7 +599,7 @@
 
     // 事件绑定 & 拖拽上传
     document.getElementById('selectFileBtn').addEventListener('click', ()=> document.getElementById('fileInput').click());
-    document.getElementById('demoFiveBtn').addEventListener('click', ()=> loadFiveDemoMerged());
+    document.getElementById('demoFiveBtn').addEventListener('click', ()=> loadDemoData());
     document.getElementById('fileInput').addEventListener('change', (e)=> {
         if(e.target.files.length) handleUploadFile(e.target.files[0]);
         e.target.value = '';
@@ -612,7 +615,7 @@
         if(files.length) handleUploadFile(files[0]);
     });
     // 初始加载演示数据（5份合并）
-    loadFiveDemoMerged();
+    loadDemoData();
 </script>
 </body>
 </html>
